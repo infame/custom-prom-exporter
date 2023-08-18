@@ -5,11 +5,13 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+// ImagesHandler - структура обработчика для парсера изображений
 type ImagesHandler struct {
 	*AbstractHandler
 	metricsMap map[string]map[string]*uint64
 }
 
+// NewImagesHandler - конструктор обработчика метрик парсера изображений
 func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*uint64) *ImagesHandler {
 	ah := NewAbstractHandler(redisClient, metricsMap)
 	ih := &ImagesHandler{
@@ -23,6 +25,7 @@ func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[strin
 	return ih
 }
 
+// initMetrics - инициализация метрик
 func (ih *ImagesHandler) initMetrics() {
 	ih.metricsMap["images"] = make(map[string]*uint64)
 
@@ -30,6 +33,7 @@ func (ih *ImagesHandler) initMetrics() {
 	ih.registerMetric("images_downloaded_total", "Total number of images downloaded")
 }
 
+// SetupRoutes - настройка роутов
 func (ih *ImagesHandler) SetupRoutes(r *gin.Engine) {
 	r.GET("/metrics/images", ih.MetricsHandler)
 	r.POST("/metrics/images/:key", ih.IncrementHandler)

@@ -6,6 +6,7 @@ import (
 
 var log *logrus.Logger
 
+// InitLogger - инициализация логгера
 func InitLogger() *logrus.Logger {
 	log = logrus.New()
 	log.SetFormatter(&logrus.TextFormatter{
@@ -14,6 +15,7 @@ func InitLogger() *logrus.Logger {
 	return log
 }
 
+// GetLogger - возвращаем инстанс логгера
 func GetLogger() *logrus.Logger {
 	return log
 }
