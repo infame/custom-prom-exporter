@@ -25,6 +25,12 @@ go mod download
 go run main.go
 ```
 
+Либо в докере с помощью команд:
+```bash
+docker build -t prom-exporter . 
+docker run -p 8200:8200 prom-exporter
+```
+
 ## Сборка и production-запуск
 
 Для сборки выполните:
