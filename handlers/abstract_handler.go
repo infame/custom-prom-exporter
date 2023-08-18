@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"prom-exporter/providers"
+	"prom-exporter/utilities"
 	"sync"
 )
 
@@ -34,6 +35,7 @@ func NewAbstractHandler(redisClient *redis.Client, metricsMap map[string]map[str
 		redisClient:    redisClient,
 		metricsMap:     metricsMap,
 		metricRegistry: make(map[string]prometheus.CounterVec),
+		log:            utilities.GetLogger(),
 	}
 }
 
@@ -120,6 +122,6 @@ func (ah *AbstractHandler) saveMetricToRedis(key string, value uint64) {
 	redisClient := providers.GetRedisClient()
 	err := redisClient.Set(context.Background(), fmt.Sprintf("prometheus:%s:%s", ah.metricType, key), value, 0).Err()
 	if err != nil {
-		log.Error("Error saving metric to Redis: ", err)
+		ah.log.Error("Error saving metric to Redis: ", err)
 	}
 }

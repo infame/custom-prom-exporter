@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"github.com/sirupsen/logrus"
 	"prom-exporter/utilities"
 )
 
@@ -10,9 +11,8 @@ import (
 type ImagesHandler struct {
 	*AbstractHandler
 	metricsMap map[string]map[string]*uint64
+	log        *logrus.Logger // Логгер для этого конкретного ImagesHandler
 }
-
-var log = utilities.GetLogger() // todo: подумать, как сделать удобнее - не факт, что заработает с новыми хэндлерами
 
 // NewImagesHandler - конструктор обработчика метрик парсера изображений
 func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*uint64) *ImagesHandler {
@@ -20,6 +20,7 @@ func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[strin
 	ih := &ImagesHandler{
 		AbstractHandler: ah,
 		metricsMap:      metricsMap,
+		log:             utilities.GetLogger(),
 	}
 
 	ih.metricSaver = ih
@@ -30,7 +31,7 @@ func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[strin
 
 // initMetrics - инициализация метрик
 func (ih *ImagesHandler) initMetrics() {
-	//log.Info(`Init ImagesHandler`)
+	ih.log.Info("Init ImagesHandler")
 	ih.metricsMap["images"] = make(map[string]*uint64)
 
 	ih.registerMetric("images_uploaded_total", "Total number of images uploaded")
