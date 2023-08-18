@@ -30,12 +30,13 @@ type MetricSaver interface {
 }
 
 // NewAbstractHandler - конструктор абстрактного обработчика
-func NewAbstractHandler(redisClient *redis.Client, metricsMap map[string]map[string]*uint64) *AbstractHandler {
+func NewAbstractHandler(redisClient *redis.Client, metricsMap map[string]map[string]*uint64, metricType string) *AbstractHandler {
 	return &AbstractHandler{
 		redisClient:    redisClient,
 		metricsMap:     metricsMap,
 		metricRegistry: make(map[string]prometheus.CounterVec),
 		log:            utilities.GetLogger(),
+		metricType:     metricType,
 	}
 }
 
@@ -62,6 +63,7 @@ func (ah *AbstractHandler) registerMetric(name, help string) {
 
 		// Инициализируем метрику в metricsMap
 		ah.createCounterMetric(name, help)
+		ah.log.Info(name, help)
 	}
 }
 
