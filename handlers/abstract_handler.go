@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"prom-exporter/providers"
-	"prom-exporter/utilities"
 	"sync"
 )
 
@@ -28,8 +27,6 @@ type AbstractHandler struct {
 type MetricSaver interface {
 	saveMetricToRedis(key string, value uint64)
 }
-
-var log = utilities.GetLogger()
 
 // NewAbstractHandler - конструктор абстрактного обработчика
 func NewAbstractHandler(redisClient *redis.Client, metricsMap map[string]map[string]*uint64) *AbstractHandler {
@@ -87,7 +84,7 @@ func (ah *AbstractHandler) IncrementHandler(c *gin.Context) {
 			counterVec := ah.metricRegistry[key]
 			counterVec.WithLabelValues(metricType).Inc()
 
-			ah.saveMetricToRedis(key, *metric)
+			//ah.saveMetricToRedis(key, *metric) // todo? подумать, можно ли сохранять каждое изменение
 			c.JSON(http.StatusOK, gin.H{key: *metric})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key"})
