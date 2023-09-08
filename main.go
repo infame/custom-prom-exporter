@@ -1,3 +1,4 @@
+// Package main - экспортер для prometheus
 package main
 
 import (
@@ -24,11 +25,65 @@ var (
 
 	redisClient *redis.Client
 	log         *logrus.Logger
-	metricsMap  map[string]map[string]*uint64
-
-	// Тут добавляем новые типы метрик
-	metricTypes = []string{"images", "parser", "aggregator"}
+	metricsMap  map[string]map[string]*float64
 )
+
+// MetricDefinition - глобальная структура метрик
+type MetricDefinition struct {
+	Type    string
+	Metrics []MetricDetail
+}
+
+// MetricDetail - структура для определения ключей и дескрипшнов
+type MetricDetail struct {
+	Key         string
+	Description string
+}
+
+// metricDefinitions - сам массив определений
+var metricDefinitions = []MetricDefinition{
+	{
+		Type: "images",
+		Metrics: []MetricDetail{
+			{Key: "parser_images_uploaded_total", Description: "Total number of uploaded images"},
+			{Key: "parser_images_downloaded_total", Description: "Total number of downloaded images"},
+		},
+	},
+	{
+		Type: "playwright",
+		Metrics: []MetricDetail{
+			{Key: "parser_playwright_metric1", Description: "Description for playwright parser metric 1"},
+			{Key: "parser_playwright_metric2", Description: "Description for playwright parser metric 2"},
+		},
+	},
+	{
+		Type: "mobile",
+		Metrics: []MetricDetail{
+			{Key: "parser_mobile_metric1", Description: "Description for mobile parser metric 1"},
+			{Key: "parser_mobile_metric2", Description: "Description for mobile parser metric 2"},
+		},
+	},
+	{
+		Type: "aggregator",
+		Metrics: []MetricDetail{
+			{Key: "parser_aggregator_metric1", Description: "Description for aggregator metric 1"},
+			{Key: "parser_aggregator_metric2", Description: "Description for aggregator metric 2"},
+		},
+	},
+}
+
+func initMetricsMap() map[string]map[string]*float64 {
+	metricsMap := make(map[string]map[string]*float64)
+
+	for _, metricDefinition := range metricDefinitions {
+		metricsMap[metricDefinition.Type] = make(map[string]*float64)
+		for _, metricDetail := range metricDefinition.Metrics {
+			metricsMap[metricDefinition.Type][metricDetail.Key] = new(float64)
+		}
+	}
+
+	return metricsMap
+}
 
 // main - точка входа в приложение
 func main() {
@@ -44,12 +99,15 @@ func main() {
 	redisClient = providers.InitRedisClient(redisAddr, redisPassword, redisDB)
 	defer providers.CloseRedisClient()
 
-	loadMetricsFromRedis()
-
 	// Инициализируем http-server
 	r := gin.Default()
 
-	metricsMap := make(map[string]map[string]*uint64) // Создаем глобальную карту для метрик
+	metricsMap = initMetricsMap() // Инициализируем глобальную карту для метрик
+	loadMetricsFromRedis()
+
+	if metricsMap["images"]["images_uploaded_total"] == nil || metricsMap["images"]["images_downloaded_total"] == nil {
+		log.Fatal("Ошибка загрузки метрик из Redis")
+	}
 
 	// Запускаем обработчики и биндим роуты
 	imagesHandler := handlers.NewImagesHandler(redisClient, metricsMap)
@@ -88,16 +146,28 @@ func loadEnvVariables() {
 
 // loadMetricsFromRedis - загружаем первичные значения из Redis, если они есть
 func loadMetricsFromRedis() {
-	for _, metricType := range metricTypes {
-		for key := range metricsMap {
-			value, err := redisClient.Get(context.Background(), fmt.Sprintf("prometheus:%s:%s", metricType, key)).Uint64()
+	log.Info(`loading metrics from redis`)
+
+	for _, metricDefinition := range metricDefinitions {
+		metricType := metricDefinition.Type
+		for _, metricDetail := range metricDefinition.Metrics {
+			key := metricDetail.Key
+			value, err := redisClient.Get(context.Background(), fmt.Sprintf("prometheus:%s:%s", metricType, key)).Float64()
 			if err != nil {
-				log.Error("Error loading metric from Redis: ", err)
-				continue
+				if err == redis.Nil {
+					log.Info("Key not found in Redis, initializing to 0: ", key)
+					value = 0
+				} else {
+					log.Error("Error loading metric from Redis: ", err)
+					continue
+				}
 			}
-			metricsMap[metricType][key] = &value
+			valuePtr := value                       // Создаём новую переменную
+			metricsMap[metricType][key] = &valuePtr // Используем адрес новой переменной
 		}
 	}
+
+	log.Info(`loading metrics from redis - finished`)
 }
 
 // getEnv - чтение переменных окружения
@@ -110,7 +180,7 @@ func getEnv(key, defaultValue string) string {
 }
 
 // saveAllMetricsToRedis - сохранение всех метрик в redis по ключам вида prometheus:<type>:<metric_key>
-func saveAllMetricsToRedis(redisClient *redis.Client, metricsMap map[string]map[string]*uint64) {
+func saveAllMetricsToRedis(redisClient *redis.Client, metricsMap map[string]map[string]*float64) {
 	var succeed = true
 	var counter = 0
 	var total = 0

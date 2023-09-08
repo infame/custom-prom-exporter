@@ -10,12 +10,12 @@ import (
 // ImagesHandler - структура обработчика для парсера изображений
 type ImagesHandler struct {
 	*AbstractHandler
-	metricsMap map[string]map[string]*uint64
+	metricsMap map[string]map[string]*float64
 	log        *logrus.Logger // Логгер для этого конкретного ImagesHandler
 }
 
 // NewImagesHandler - конструктор обработчика метрик парсера изображений
-func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*uint64) *ImagesHandler {
+func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*float64) *ImagesHandler {
 	metricType := "images" // todo: вынести в main.go или куда-то, чтоб не прописывать каждый раз в новом хэндлере
 	ah := NewAbstractHandler(redisClient, metricsMap, metricType)
 	ih := &ImagesHandler{
@@ -33,10 +33,9 @@ func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[strin
 // initMetrics - инициализация метрик
 func (ih *ImagesHandler) initMetrics() {
 	ih.log.Info("Init ImagesHandler")
-	ih.metricsMap["images"] = make(map[string]*uint64)
 
-	ih.registerMetric("images_uploaded_total", "Total number of images uploaded")
-	ih.registerMetric("images_downloaded_total", "Total number of images downloaded")
+	ih.registerMetric("images_uploaded_total", "Total number of images uploaded", *ih.metricsMap["images"]["images_uploaded_total"])
+	ih.registerMetric("images_downloaded_total", "Total number of images downloaded", *ih.metricsMap["images"]["images_downloaded_total"])
 }
 
 // SetupRoutes - настройка роутов
