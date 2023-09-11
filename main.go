@@ -10,10 +10,13 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 	"os"
+	"os/signal"
 	"prom-exporter/handlers"
 	"prom-exporter/providers"
+	"prom-exporter/types"
 	"prom-exporter/utilities"
 	"strconv"
+	"syscall"
 )
 
 var (
@@ -28,46 +31,34 @@ var (
 	metricsMap  map[string]map[string]*float64
 )
 
-// MetricDefinition - глобальная структура метрик
-type MetricDefinition struct {
-	Type    string
-	Metrics []MetricDetail
-}
-
-// MetricDetail - структура для определения ключей и дескрипшнов
-type MetricDetail struct {
-	Key         string
-	Description string
-}
-
 // metricDefinitions - сам массив определений
-var metricDefinitions = []MetricDefinition{
+var metricDefinitions = []types.MetricDefinition{
 	{
 		Type: "images",
-		Metrics: []MetricDetail{
-			{Key: "parser_images_uploaded_total", Description: "Total number of uploaded images"},
-			{Key: "parser_images_downloaded_total", Description: "Total number of downloaded images"},
+		Metrics: []types.MetricDetail{
+			{Key: "uploaded_total", Description: "Total number of uploaded images"},
+			{Key: "downloaded_total", Description: "Total number of downloaded images"},
 		},
 	},
 	{
 		Type: "playwright",
-		Metrics: []MetricDetail{
-			{Key: "parser_playwright_metric1", Description: "Description for playwright parser metric 1"},
-			{Key: "parser_playwright_metric2", Description: "Description for playwright parser metric 2"},
+		Metrics: []types.MetricDetail{
+			{Key: "pw_metric1", Description: "Description for playwright parser metric 1"},
+			{Key: "pw_metric2", Description: "Description for playwright parser metric 2"},
 		},
 	},
 	{
 		Type: "mobile",
-		Metrics: []MetricDetail{
-			{Key: "parser_mobile_metric1", Description: "Description for mobile parser metric 1"},
-			{Key: "parser_mobile_metric2", Description: "Description for mobile parser metric 2"},
+		Metrics: []types.MetricDetail{
+			{Key: "mob_metric1", Description: "Description for mobile parser metric 1"},
+			{Key: "mob_metric2", Description: "Description for mobile parser metric 2"},
 		},
 	},
 	{
 		Type: "aggregator",
-		Metrics: []MetricDetail{
-			{Key: "parser_aggregator_metric1", Description: "Description for aggregator metric 1"},
-			{Key: "parser_aggregator_metric2", Description: "Description for aggregator metric 2"},
+		Metrics: []types.MetricDetail{
+			{Key: "agg_metric1", Description: "Description for aggregator metric 1"},
+			{Key: "agg_metric2", Description: "Description for aggregator metric 2"},
 		},
 	},
 }
@@ -89,6 +80,16 @@ func initMetricsMap() map[string]map[string]*float64 {
 func main() {
 	loadEnvVariables()
 
+	// Обрабатываем sigterm
+	chSub := make(chan os.Signal, 1)
+	signal.Notify(chSub, syscall.SIGTERM)
+	signal.Notify(chSub, syscall.SIGINT)
+
+	go func() {
+		sig := <-chSub
+		handleSignal(sig)
+	}()
+
 	// Включаем логгер
 	log = utilities.InitLogger()
 	log.SetFormatter(&logrus.TextFormatter{
@@ -105,12 +106,12 @@ func main() {
 	metricsMap = initMetricsMap() // Инициализируем глобальную карту для метрик
 	loadMetricsFromRedis()
 
-	if metricsMap["images"]["images_uploaded_total"] == nil || metricsMap["images"]["images_downloaded_total"] == nil {
-		log.Fatal("Ошибка загрузки метрик из Redis")
-	}
+	//if metricsMap["images"]["images_uploaded_total"] == nil || metricsMap["images"]["images_downloaded_total"] == nil {
+	//	log.Fatal("Ошибка загрузки метрик из Redis")
+	//}
 
 	// Запускаем обработчики и биндим роуты
-	imagesHandler := handlers.NewImagesHandler(redisClient, metricsMap)
+	imagesHandler := handlers.NewImagesHandler(redisClient, metricsMap, metricDefinitions)
 	imagesHandler.SetupRoutes(r)
 
 	// Создаем глобальный эндпоинт для всех метрик
@@ -137,7 +138,7 @@ func main() {
 
 // loadEnvVariables - загружаем переменные из .env
 func loadEnvVariables() {
-	serverAddr = getEnv("PORT", ":8200")
+	serverAddr = ":" + getEnv("PORT", "8200")
 	redisAddr = getEnv("REDIS_DSN", "localhost:6379")
 	redisPassword = getEnv("REDIS_PASSWORD", "")
 	redisDB, _ = strconv.Atoi(getEnv("REDIS_DB", "0"))
@@ -152,10 +153,11 @@ func loadMetricsFromRedis() {
 		metricType := metricDefinition.Type
 		for _, metricDetail := range metricDefinition.Metrics {
 			key := metricDetail.Key
-			value, err := redisClient.Get(context.Background(), fmt.Sprintf("prometheus:%s:%s", metricType, key)).Float64()
+			redisKey := fmt.Sprintf("prometheus:parser_%s_%s", metricType, key)
+			value, err := redisClient.Get(context.Background(), redisKey).Float64()
 			if err != nil {
 				if err == redis.Nil {
-					log.Info("Key not found in Redis, initializing to 0: ", key)
+					log.Info("Key not found in Redis, initializing to 0: ", redisKey)
 					value = 0
 				} else {
 					log.Error("Error loading metric from Redis: ", err)
@@ -166,8 +168,6 @@ func loadMetricsFromRedis() {
 			metricsMap[metricType][key] = &valuePtr // Используем адрес новой переменной
 		}
 	}
-
-	log.Info(`loading metrics from redis - finished`)
 }
 
 // getEnv - чтение переменных окружения
@@ -186,7 +186,8 @@ func saveAllMetricsToRedis(redisClient *redis.Client, metricsMap map[string]map[
 	var total = 0
 	for metricType, metricTypeMap := range metricsMap {
 		for key, value := range metricTypeMap {
-			err := redisClient.Set(context.Background(), fmt.Sprintf("prometheus:%s:%s", metricType, key), *value, 0).Err()
+			redisKey := fmt.Sprintf("prometheus:parser_%s_%s", metricType, key)
+			err := redisClient.Set(context.Background(), redisKey, *value, 0).Err()
 			total++
 			if err != nil {
 				log.Error("Error saving metric to Redis: ", err)
@@ -200,4 +201,11 @@ func saveAllMetricsToRedis(redisClient *redis.Client, metricsMap map[string]map[
 	if succeed {
 		log.Info("Metrics were saved to redis (" + strconv.Itoa(counter) + " of " + strconv.Itoa(total) + ")")
 	}
+}
+
+func handleSignal(sig os.Signal) {
+	log.Warnf("Got sig: %v, terminating process...\n", sig)
+	saveAllMetricsToRedis(redisClient, metricsMap)
+	log.Info("Exiting...")
+	os.Exit(0)
 }

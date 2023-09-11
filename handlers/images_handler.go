@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
+	"prom-exporter/types"
 	"prom-exporter/utilities"
 )
 
@@ -12,10 +13,11 @@ type ImagesHandler struct {
 	*AbstractHandler
 	metricsMap map[string]map[string]*float64
 	log        *logrus.Logger // Логгер для этого конкретного ImagesHandler
+	metricType string
 }
 
 // NewImagesHandler - конструктор обработчика метрик парсера изображений
-func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*float64) *ImagesHandler {
+func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*float64, metricDefinition []types.MetricDefinition) *ImagesHandler {
 	metricType := "images" // todo: вынести в main.go или куда-то, чтоб не прописывать каждый раз в новом хэндлере
 	ah := NewAbstractHandler(redisClient, metricsMap, metricType)
 	ih := &ImagesHandler{
@@ -25,17 +27,26 @@ func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[strin
 	}
 
 	ih.metricSaver = ih
-	ih.initMetrics() // Инициализация метрик для images
+	ih.initMetrics(metricType, metricDefinition) // Инициализация метрик для images
 
 	return ih
 }
 
-// initMetrics - инициализация метрик
-func (ih *ImagesHandler) initMetrics() {
+// initMetrics - инициализация метрик в проме
+func (ih *ImagesHandler) initMetrics(metricType string, metricDefinitions []types.MetricDefinition) {
 	ih.log.Info("Init ImagesHandler")
+	count := 0
 
-	ih.registerMetric("images_uploaded_total", "Total number of images uploaded", *ih.metricsMap["images"]["images_uploaded_total"])
-	ih.registerMetric("images_downloaded_total", "Total number of images downloaded", *ih.metricsMap["images"]["images_downloaded_total"])
+	for _, metricDefinition := range metricDefinitions {
+		for _, metricDetail := range metricDefinition.Metrics {
+			if metricType == metricDefinition.Type {
+				ih.registerMetric(metricDetail.Key, metricDetail.Description, *ih.metricsMap[metricDefinition.Type][metricDetail.Key])
+				count++
+			}
+		}
+	}
+
+	ih.log.Info("Registered metrics: ", count)
 }
 
 // SetupRoutes - настройка роутов

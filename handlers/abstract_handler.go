@@ -122,7 +122,7 @@ func (ah *AbstractHandler) GetMetrics() map[string]*float64 {
 // saveMetricToRedis - хелпер для сохранения атомарных метрик в Redis
 func (ah *AbstractHandler) saveMetricToRedis(key string, value float64) {
 	redisClient := providers.GetRedisClient()
-	err := redisClient.Set(context.Background(), fmt.Sprintf("prometheus:%s:%s", ah.metricType, key), value, 0).Err()
+	err := redisClient.Set(context.Background(), fmt.Sprintf("prometheus:parser_%s_%s", ah.metricType, key), value, 0).Err()
 	if err != nil {
 		ah.log.Error("Error saving metric to Redis: ", err)
 	}
