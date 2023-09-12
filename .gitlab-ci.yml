@@ -1,0 +1,37 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  CONTAINER_IMAGE: $REGISTRY_HOST/services/prom-exporter:$CI_COMMIT_REF_SLUG
+
+image: docker:20-git
+
+services:
+  - name: docker:20-dind
+    command: [ "--tls=false" ]
+
+build_app:
+  stage: build
+  script:
+    - docker build -t $CONTAINER_IMAGE .
+    - docker push $CONTAINER_IMAGE
+
+.deploy:
+  stage: deploy
+  image: alpine/k8s:1.20.4
+  before_script:
+    - kubectl config set-cluster k8s --server="$KUBE_GENERAL_URL" --insecure-skip-tls-verify=true
+    - kubectl config set-credentials admin --token="$KUBE_GENERAL_TOKEN"
+    - kubectl config set-context default --cluster=k8s --user=admin
+    - kubectl config use-context default
+  only:
+    - master
+
+deploy_prod:
+  extends: .deploy
+  script:
+    - kubectl apply --recursive -f .kube/prod/
+    - kubectl rollout restart deployment --namespace infra prom-exporter-prod
+  only:
+    - master
