@@ -36,31 +36,34 @@ var metricDefinitions = []types.MetricDefinition{
 	{
 		Type: "images",
 		Metrics: []types.MetricDetail{
-			{Key: "uploaded_total", Description: "Total number of uploaded images"},
-			{Key: "downloaded_total", Description: "Total number of downloaded images"},
+			{Key: "already_stored_total", Description: "Total number of found images that are already stored in the bucket"},
+			{Key: "upload_succeed_total", Description: "Total number of uploads of images"},
+			{Key: "unhandled_errors_total", Description: "Total number of unhandled errors"},
+			//{Key: "uploaded_total", Description: "Total number of new uploaded images"},
 		},
 	},
-	{
-		Type: "playwright",
-		Metrics: []types.MetricDetail{
-			{Key: "pw_metric1", Description: "Description for playwright parser metric 1"},
-			{Key: "pw_metric2", Description: "Description for playwright parser metric 2"},
-		},
-	},
-	{
-		Type: "mobile",
-		Metrics: []types.MetricDetail{
-			{Key: "mob_metric1", Description: "Description for mobile parser metric 1"},
-			{Key: "mob_metric2", Description: "Description for mobile parser metric 2"},
-		},
-	},
-	{
-		Type: "aggregator",
-		Metrics: []types.MetricDetail{
-			{Key: "agg_metric1", Description: "Description for aggregator metric 1"},
-			{Key: "agg_metric2", Description: "Description for aggregator metric 2"},
-		},
-	},
+	// метрики ниже -- для примера
+	//{
+	//	Type: "playwright",
+	//	Metrics: []types.MetricDetail{
+	//		{Key: "pw_metric1", Description: "Description for playwright parser metric 1"},
+	//		{Key: "pw_metric2", Description: "Description for playwright parser metric 2"},
+	//	},
+	//},
+	//{
+	//	Type: "mobile",
+	//	Metrics: []types.MetricDetail{
+	//		{Key: "mob_metric1", Description: "Description for mobile parser metric 1"},
+	//		{Key: "mob_metric2", Description: "Description for mobile parser metric 2"},
+	//	},
+	//},
+	//{
+	//	Type: "aggregator",
+	//	Metrics: []types.MetricDetail{
+	//		{Key: "agg_metric1", Description: "Description for aggregator metric 1"},
+	//		{Key: "agg_metric2", Description: "Description for aggregator metric 2"},
+	//	},
+	//},
 }
 
 func initMetricsMap() map[string]map[string]*float64 {
