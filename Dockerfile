@@ -21,9 +21,6 @@ RUN apk --no-cache add ca-certificates redis
 # Копируем скомпилированное приложение из первого этапа
 COPY --from=builder /app/app /app/app
 
-# Копируем файл .env
-COPY .env /app/.env
-
 # Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
