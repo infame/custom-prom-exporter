@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
+	"io"
 	"os"
 	"os/signal"
 	"prom-exporter/handlers"
@@ -17,6 +18,7 @@ import (
 	"prom-exporter/utilities"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 var (
@@ -25,6 +27,7 @@ var (
 	redisPassword string
 	redisDB       int
 	redisCooldown int
+	ginMode       string
 
 	redisClient *redis.Client
 	log         *logrus.Logger
@@ -95,16 +98,38 @@ func main() {
 
 	// Включаем логгер
 	log = utilities.InitLogger()
-	log.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
 
 	// Подключаемся к Redis
 	redisClient = providers.InitRedisClient(redisAddr, redisPassword, redisDB)
 	defer providers.CloseRedisClient()
 
 	// Инициализируем http-server
-	r := gin.Default()
+	r := gin.New()
+	gin.SetMode(ginMode)
+
+	// Активируем middleware
+	r.Use(gin.Recovery())
+
+	// Отключаем стандартные логи
+	gin.DisableConsoleColor()
+	gin.DefaultWriter = io.Discard
+
+	// Форматируем опции в формат kibana
+	r.Use(func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		latency := time.Since(start)
+
+		logrus.WithFields(logrus.Fields{
+			"client_ip":  c.ClientIP(),
+			"method":     c.Request.Method,
+			"status":     c.Writer.Status(),
+			"user_agent": c.Request.UserAgent(),
+			"latency":    latency,
+			"endpoint":   c.Request.URL.Path,
+			"time":       start.Format(time.RFC3339),
+		}).Info("Request processed")
+	})
 
 	metricsMap = initMetricsMap() // Инициализируем глобальную карту для метрик
 	loadMetricsFromRedis()
@@ -141,6 +166,7 @@ func main() {
 
 // loadEnvVariables - загружаем переменные из .env
 func loadEnvVariables() {
+	ginMode = getEnv("GIN_MODE", "release")
 	serverAddr = ":" + getEnv("PORT", "8200")
 	redisAddr = getEnv("REDIS_DSN", "localhost:6379")
 	redisPassword = getEnv("REDIS_PASSWORD", "")
