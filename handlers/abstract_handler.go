@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"prom-exporter/helpers"
 	"prom-exporter/providers"
 	"prom-exporter/utilities"
 	"sync"
@@ -47,7 +47,8 @@ func (ah *AbstractHandler) createCounterMetric(key string, initValue float64) {
 }
 
 // registerMetric - регистрация метрики в мапе prometheus (поддерживаются только counter)
-func (ah *AbstractHandler) registerMetric(name, help string, initValue float64) {
+func (ah *AbstractHandler) registerMetric(metricType, metricName, help string, initValue float64) {
+	name := helpers.GetFormattedMetricName(metricType, metricName)
 	if _, exists := ah.metricRegistry[name]; !exists {
 		counterVec := prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -59,11 +60,11 @@ func (ah *AbstractHandler) registerMetric(name, help string, initValue float64) 
 		prometheus.MustRegister(counterVec)
 		ah.metricRegistry[name] = *counterVec
 
-		// Инициализируем метрику в metricsMap
-		ah.createCounterMetric(name, initValue)
+		// Инициализируем метрику в metricsMap с сокращенным ключом
+		ah.createCounterMetric(metricName, initValue)
 		ah.log.Info(name, " ", help)
 
-		counterVec.WithLabelValues("your_label_value_here").Add(initValue)
+		//counterVec.WithLabelValues("your_label_value_here").Add(initValue)
 	}
 }
 
@@ -85,8 +86,8 @@ func (ah *AbstractHandler) IncrementHandler(c *gin.Context) {
 		if metric, metricExists := metricTypeMetrics[key]; metricExists {
 			*metric++
 
-			counterVec := ah.metricRegistry[key]
-			counterVec.WithLabelValues(metricType).Inc()
+			counterVec := ah.metricRegistry[helpers.GetFormattedMetricName(metricType, key)]
+			counterVec.WithLabelValues(metricType).Inc() // todo? тут может быть проблема с дублированием
 
 			//ah.saveMetricToRedis(key, *metric) // todo? подумать, можно ли сохранять каждое изменение
 			c.JSON(http.StatusOK, gin.H{key: *metric})
@@ -122,7 +123,7 @@ func (ah *AbstractHandler) GetMetrics() map[string]*float64 {
 // saveMetricToRedis - хелпер для сохранения атомарных метрик в Redis
 func (ah *AbstractHandler) saveMetricToRedis(key string, value float64) {
 	redisClient := providers.GetRedisClient()
-	err := redisClient.Set(context.Background(), fmt.Sprintf("prometheus:parser_%s_%s", ah.metricType, key), value, 0).Err()
+	err := redisClient.Set(context.Background(), helpers.GetFormattedRedisKey(ah.metricType, key), value, 0).Err()
 	if err != nil {
 		ah.log.Error("Error saving metric to Redis: ", err)
 	}

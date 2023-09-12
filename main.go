@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -12,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"prom-exporter/handlers"
+	"prom-exporter/helpers"
 	"prom-exporter/providers"
 	"prom-exporter/types"
 	"prom-exporter/utilities"
@@ -156,7 +156,8 @@ func loadMetricsFromRedis() {
 		metricType := metricDefinition.Type
 		for _, metricDetail := range metricDefinition.Metrics {
 			key := metricDetail.Key
-			redisKey := fmt.Sprintf("prometheus:parser_%s_%s", metricType, key)
+			redisKey := helpers.GetFormattedRedisKey(metricType, key)
+			metricName := helpers.GetFormattedMetricName(metricType, key)
 			value, err := redisClient.Get(context.Background(), redisKey).Float64()
 			if err != nil {
 				if err == redis.Nil {
@@ -166,6 +167,8 @@ func loadMetricsFromRedis() {
 					log.Error("Error loading metric from Redis: ", err)
 					continue
 				}
+			} else {
+				log.Infof("Loaded metric %s with value = %d", metricName, int(value))
 			}
 			valuePtr := value                       // Создаём новую переменную
 			metricsMap[metricType][key] = &valuePtr // Используем адрес новой переменной
@@ -189,7 +192,7 @@ func saveAllMetricsToRedis(redisClient *redis.Client, metricsMap map[string]map[
 	var total = 0
 	for metricType, metricTypeMap := range metricsMap {
 		for key, value := range metricTypeMap {
-			redisKey := fmt.Sprintf("prometheus:parser_%s_%s", metricType, key)
+			redisKey := helpers.GetFormattedRedisKey(metricType, key)
 			err := redisClient.Set(context.Background(), redisKey, *value, 0).Err()
 			total++
 			if err != nil {

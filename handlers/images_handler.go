@@ -40,7 +40,7 @@ func (ih *ImagesHandler) initMetrics(metricType string, metricDefinitions []type
 	for _, metricDefinition := range metricDefinitions {
 		for _, metricDetail := range metricDefinition.Metrics {
 			if metricType == metricDefinition.Type {
-				ih.registerMetric(metricDetail.Key, metricDetail.Description, *ih.metricsMap[metricDefinition.Type][metricDetail.Key])
+				ih.registerMetric(metricDefinition.Type, metricDetail.Key, metricDetail.Description, *ih.metricsMap[metricDefinition.Type][metricDetail.Key])
 				count++
 			}
 		}
