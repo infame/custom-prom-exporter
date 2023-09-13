@@ -10,24 +10,7 @@ import (
 	"prom-exporter/helpers"
 	"prom-exporter/providers"
 	"prom-exporter/utilities"
-	"sync"
 )
-
-// AbstractHandler - структура обработчика
-type AbstractHandler struct {
-	mutex          sync.Mutex
-	metricsMap     map[string]map[string]*float64
-	metricRegistry map[string]prometheus.CounterVec
-	metricType     string
-	redisClient    *redis.Client
-	metricSaver    MetricSaver
-	log            *logrus.Logger
-}
-
-// MetricSaver - интерфейс для записи ключей в Redis - not used
-type MetricSaver interface {
-	saveMetricToRedis(key string, value float64)
-}
 
 // NewAbstractHandler - конструктор абстрактного обработчика
 func NewAbstractHandler(redisClient *redis.Client, metricsMap map[string]map[string]*float64, metricType string) *AbstractHandler {
@@ -55,7 +38,7 @@ func (ah *AbstractHandler) registerMetric(metricType, metricName, help string, i
 				Name: name,
 				Help: help,
 			},
-			[]string{"type"},
+			[]string{"marketplaceCode"},
 		)
 		prometheus.MustRegister(counterVec)
 		ah.metricRegistry[name] = *counterVec
@@ -77,25 +60,40 @@ func (ah *AbstractHandler) MetricsHandler(c *gin.Context) {
 
 // IncrementHandler - обработчик POST-запросов
 func (ah *AbstractHandler) IncrementHandler(c *gin.Context) {
-	metricType := ah.metricType
-	key := c.Param("key")
-	if metricTypeMetrics, ok := ah.metricsMap[metricType]; ok && key != "" {
+	var payload MetricsPayload
+
+	if err := c.BindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	if metricTypeMetrics, ok := ah.metricsMap[ah.metricType]; ok {
 		ah.mutex.Lock()
 		defer ah.mutex.Unlock()
 
-		if metric, metricExists := metricTypeMetrics[key]; metricExists {
-			*metric++
+		for _, metricData := range payload.Metrics {
+			if metricData.Key == "" {
+				logrus.Warn("Empty metric key received")
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Empty metric key"})
+				return
+			}
 
-			counterVec := ah.metricRegistry[helpers.GetFormattedMetricName(metricType, key)]
-			counterVec.WithLabelValues(metricType).Inc() // todo? тут может быть проблема с дублированием
+			if metric, metricExists := metricTypeMetrics[metricData.Key]; metricExists {
+				*metric += float64(metricData.Value)
 
-			//ah.saveMetricToRedis(key, *metric) // todo? подумать, можно ли сохранять каждое изменение
-			c.JSON(http.StatusOK, gin.H{key: *metric})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key"})
+				counterVec := ah.metricRegistry[helpers.GetFormattedMetricName(ah.metricType, metricData.Key)]
+				counterVec.WithLabelValues(payload.MarketplaceCode).Add(float64(metricData.Value))
+
+				//ah.saveMetricToRedis(metricData.Key, *metric) // взвешивание включения этой функции, возможно, стоит обсудить
+			} else {
+				ah.log.Warnf("Invalid metric key received: %s", metricData.Key)
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key"})
+				return
+			}
 		}
+		c.JSON(http.StatusOK, gin.H{"status": "success"})
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metric type or missing key"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metric type"})
 	}
 }
 

@@ -52,6 +52,6 @@ func (ih *ImagesHandler) initMetrics(metricType string, metricDefinitions []type
 // SetupRoutes - настройка роутов
 func (ih *ImagesHandler) SetupRoutes(r *gin.Engine) {
 	r.GET("/parser/images", ih.MetricsHandler)
-	r.POST("/parser/images/:key", ih.IncrementHandler)
+	r.POST("/parser/images", ih.IncrementHandler)
 	r.DELETE("/parser/images", ih.ResetHandler)
 }
