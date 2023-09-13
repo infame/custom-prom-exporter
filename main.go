@@ -120,7 +120,7 @@ func main() {
 		c.Next()
 		latency := time.Since(start)
 
-		logrus.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"client_ip":  c.ClientIP(),
 			"method":     c.Request.Method,
 			"status":     c.Writer.Status(),

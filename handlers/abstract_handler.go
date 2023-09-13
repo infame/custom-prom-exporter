@@ -24,7 +24,7 @@ type AbstractHandler struct {
 	log            *logrus.Logger
 }
 
-// MetricSaver - интерфейс для записи ключей в Redis
+// MetricSaver - интерфейс для записи ключей в Redis - not used
 type MetricSaver interface {
 	saveMetricToRedis(key string, value float64)
 }
