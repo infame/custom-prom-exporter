@@ -39,10 +39,10 @@ var metricDefinitions = []types.MetricDefinition{
 	{
 		Type: "images",
 		Metrics: []types.MetricDetail{
-			{Key: "already_stored_total", Description: "Total number of found images that are already stored in the bucket"},
-			{Key: "upload_succeed_total", Description: "Total number of uploads of images"},
+			{Key: "cached_images_total", Description: "Total number of found images that are already stored in the bucket"},
+			{Key: "successful_uploads_total", Description: "Total number of uploads of images"},
+			{Key: "empty_images_total", Description: "Total number of sku without images"},
 			{Key: "unhandled_errors_total", Description: "Total number of unhandled errors"},
-			//{Key: "uploaded_total", Description: "Total number of new uploaded images"},
 		},
 	},
 	// метрики ниже -- для примера
