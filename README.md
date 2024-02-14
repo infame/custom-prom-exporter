@@ -8,9 +8,10 @@
 В нем реализованы метрики, которые необходимо прокидывать в prometheus. 
 
 Нэйминг метрик:
-- сами метрики называются по принципу `metricName` = `<команда>_<приложение>_<название_метрики>`
+- сами метрики называются по принципу `metricName` = `<приложение>_<названиеМетрики>`
 - название ключа redis - название метрики с префиксом `prometheus:<metricName>`
-- пример - метрика `parser_images_uploaded_total`, ключ в redis - `prometheus:parser_images_uploaded_total`
+- пример - метрика `successful_uploads_total` приложения `parser_images`, полное название метрики для дебага - `parser_images_successful_uploads_total`, 
+- ключ в redis - `prometheus:parser_images_successful_uploads_total`
 
 Для добавления новой метрики: ...<TBD> 
 

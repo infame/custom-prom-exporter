@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -37,7 +38,7 @@ var (
 // metricDefinitions - сам массив определений
 var metricDefinitions = []types.MetricDefinition{
 	{
-		Type: "images",
+		Type: "parser_images",
 		Metrics: []types.MetricDetail{
 			{Key: "cached_images_total", Description: "Total number of found images that are already stored in the bucket"},
 			{Key: "successful_uploads_total", Description: "Total number of uploads of images"},
@@ -186,7 +187,7 @@ func loadMetricsFromRedis() {
 			metricName := helpers.GetFormattedMetricName(metricType, key)
 			value, err := redisClient.Get(context.Background(), redisKey).Float64()
 			if err != nil {
-				if err == redis.Nil {
+				if errors.Is(err, redis.Nil) {
 					log.Info("Key not found in Redis, initializing to 0: ", redisKey)
 					value = 0
 				} else {

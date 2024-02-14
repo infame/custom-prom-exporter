@@ -18,7 +18,7 @@ type ImagesHandler struct {
 
 // NewImagesHandler - конструктор обработчика метрик парсера изображений
 func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*float64, metricDefinition []types.MetricDefinition) *ImagesHandler {
-	metricType := "images" // todo: вынести в main.go или куда-то, чтоб не прописывать каждый раз в новом хэндлере
+	metricType := "parser_images" // todo: вынести в main.go или куда-то, чтоб не прописывать каждый раз в новом хэндлере
 	ah := NewAbstractHandler(redisClient, metricsMap, metricType)
 	ih := &ImagesHandler{
 		AbstractHandler: ah,

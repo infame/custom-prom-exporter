@@ -3,7 +3,7 @@ package helpers
 import "fmt"
 
 func GetFormattedMetricName(metricType string, key string) string {
-	return fmt.Sprintf("parser_%s_%s", metricType, key)
+	return fmt.Sprintf("%s_%s", metricType, key)
 }
 
 func GetFormattedRedisKey(metricType string, key string) string {
