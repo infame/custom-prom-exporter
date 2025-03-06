@@ -1,12 +1,12 @@
 package types
 
-// MetricDefinition - глобальная структура метрик
+// MetricDefinition - global metrics struct
 type MetricDefinition struct {
 	Type    string
 	Metrics []MetricDetail
 }
 
-// MetricDetail - структура для определения ключей и дескрипшнов
+// MetricDetail - keys-descriptions struct
 type MetricDetail struct {
 	Key         string
 	Description string

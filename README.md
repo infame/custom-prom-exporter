@@ -1,34 +1,33 @@
 # prom-exporter
 
-Этот проект является приложением для экспорта метрик в Prometheus.
+This project is an application for exporting metrics to Prometheus.
 
-## О проекте (WIP)
-Приложение запускает http-сервер для prometheus и контрибьюторов данных. 
-У каждого контрибьютора должен быть свой обработчик, например, `./handlers/images_handler` - для парсера изображений. \
-В нем реализованы метрики, которые необходимо прокидывать в prometheus. 
+## About the Project (WIP)
+The application starts an HTTP server for Prometheus and data contributors.
+Each contributor should have its own handler, for example, `./handlers/images_handler` for the image parser.
+In it, the metrics that need to be forwarded to Prometheus are implemented.
 
-Нэйминг метрик:
-- сами метрики называются по принципу `metricName` = `<приложение>_<названиеМетрики>`
-- название ключа redis - название метрики с префиксом `prometheus:<metricName>`
-- пример - метрика `successful_uploads_total` приложения `parser_images`, полное название метрики для дебага - `parser_images_successful_uploads_total`, 
-- ключ в redis - `prometheus:parser_images_successful_uploads_total`
+### Metric Naming:
+- The metrics themselves are named following the principle `metricName` = `<application>_<metricName>`
+- The Redis key name is the metric name with the prefix `prometheus:<metricName>`
+- Example: for the metric `successful_uploads_total` of the `parser_images` application, the full metric name for debugging is `parser_images_successful_uploads_total`, and the Redis key is `prometheus:parser_images_successful_uploads_total`
 
-Для добавления новой метрики: ...<TBD> 
+For adding a new metric: ...<TBD>
 
-Для добавления нового контрибьютора: ...<TBD>
+For adding a new contributor: ...<TBD>
 
-Основные метрики приложения доступны по адресу http://localhost:8200/metrics
+The main metrics of the application are available at http://localhost:8200/metrics
 
-## Переменные окружения
+## Environment Variables
 
-- `REDIS_SYNC_INTERVAL`: Интервал в секундах для сохранения метрик в Redis. Пример значения: `10`
-- `PORT`: Порт, на котором будет запущен сервер. Пример значения: `8200`
-- `REDIS_DSN`: Строка подключения к Redis. Пример значения: `redis://localhost:6379`
-- `GIN_MODE`: Режим работы Gin (фреймворка для веб-приложений на Go). Пример значения: `release`. Возможные значения: `debug | release | test`.
+- `REDIS_SYNC_INTERVAL`: Interval in seconds for saving metrics to Redis. Example value: `10`
+- `PORT`: Port on which the server will run. Example value: `8200`
+- `REDIS_DSN`: Connection string for Redis. Example value: `redis://localhost:6379`
+- `GIN_MODE`: Gin mode (a web framework for Go). Example value: `release`. Possible values: `debug | release | test`.
 
-## Установка зависимостей
+## Installing Dependencies
 
-Для установки зависимостей проекта выполните:
+To install the project dependencies, run:
 
 ```bash
 go mod download
@@ -36,33 +35,34 @@ go mod download
 
 ## Локальный запуск
 
-Проект может быть запущен с помощью следующей команды:
+The project can be launched using the following command:
 
 ```bash
 go run main.go
 ```
 
-Либо в докере с помощью команд:
+Alternatively, you can run it in Docker with the following commands:
 ```bash
 docker build -t prom-exporter . 
 docker run -p 8200:8200 prom-exporter
 ```
 
-## Сборка и production-запуск
+## Build and Production Run
 
-Для сборки выполните:
+To build, run:
 ```bash
 go build
 ```
 
-Запуск осуществляется через обращение к исполняемому файлу:
+The application is executed by invoking the compiled file:
 ```bash
 ./prom-exporter
 ```
 
-## Интеграция с Prometheus
+## Integration with Prometheus
 
-Для интеграции с Prometheus, убедитесь, что вы добавили ваши метрики в коде и зарегистрировали их с помощью prometheus.MustRegister(). Затем, чтобы Prometheus мог собирать метрики, вы должны добавить конфигурацию в yml-манифест. Пример:
+For integration with Prometheus, ensure that you have added your metrics in the code and registered them using prometheus.MustRegister().
+Then, for Prometheus to collect metrics, add the following configuration in your YAML manifest. Example:
 ```yaml
 scrape_configs:
   - job_name: 'prom-exporter'
@@ -70,8 +70,8 @@ scrape_configs:
       - targets: ['localhost:8200']
 ```
 
-## Развертывание
-При развертывании данного приложения в среде DevOps, рекомендуется настроить следующие пункты:
+## Deployment
 
-* Поднимите Redis-сервер и настройте REDIS_DSN в соответствии с его адресом и портом.
-* Настройте значение переменной REDIS_SYNC_INTERVAL в зависимости от частоты обновления метрик, которую вы хотите.
+When deploying this application in a DevOps environment, it is recommended to configure the following items:
+*	Set up a Redis server and configure REDIS_DSN according to its address and port.
+*	Set the value of the REDIS_SYNC_INTERVAL variable based on the desired frequency of metric updates.

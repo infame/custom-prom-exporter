@@ -12,7 +12,7 @@ import (
 	"prom-exporter/utilities"
 )
 
-// NewAbstractHandler - конструктор абстрактного обработчика
+// NewAbstractHandler - abstract handler constructor
 func NewAbstractHandler(redisClient *redis.Client, metricsMap map[string]map[string]*float64, metricType string) *AbstractHandler {
 	return &AbstractHandler{
 		redisClient:    redisClient,
@@ -23,13 +23,13 @@ func NewAbstractHandler(redisClient *redis.Client, metricsMap map[string]map[str
 	}
 }
 
-// createCounterMetric - создание метрики и запись в обычную мапу
+// createCounterMetric - metrics and records to the map
 func (ah *AbstractHandler) createCounterMetric(key string, initValue float64) {
 	ah.metricsMap[ah.metricType][key] = new(float64)
 	*ah.metricsMap[ah.metricType][key] = initValue
 }
 
-// registerMetric - регистрация метрики в мапе prometheus (поддерживаются только counter)
+// registerMetric - register counter metric to prometheus map
 func (ah *AbstractHandler) registerMetric(metricType, metricName, help string, initValue float64) {
 	name := helpers.GetFormattedMetricName(metricType, metricName)
 	if _, exists := ah.metricRegistry[name]; !exists {
@@ -43,7 +43,7 @@ func (ah *AbstractHandler) registerMetric(metricType, metricName, help string, i
 		prometheus.MustRegister(counterVec)
 		ah.metricRegistry[name] = *counterVec
 
-		// Инициализируем метрику в metricsMap с сокращенным ключом
+		// init metric with shortened key
 		ah.createCounterMetric(metricName, initValue)
 		ah.log.Info(name, " ", help)
 
@@ -51,14 +51,14 @@ func (ah *AbstractHandler) registerMetric(metricType, metricName, help string, i
 	}
 }
 
-// MetricsHandler - обработчик GET-запросов
+// MetricsHandler - get handler
 func (ah *AbstractHandler) MetricsHandler(c *gin.Context) {
 	ah.mutex.Lock()
 	defer ah.mutex.Unlock()
 	c.JSON(http.StatusOK, ah.metricsMap[ah.metricType])
 }
 
-// IncrementHandler - обработчик POST-запросов
+// IncrementHandler - post handler
 func (ah *AbstractHandler) IncrementHandler(c *gin.Context) {
 	var payload MetricsPayload
 
@@ -84,7 +84,7 @@ func (ah *AbstractHandler) IncrementHandler(c *gin.Context) {
 				counterVec := ah.metricRegistry[helpers.GetFormattedMetricName(ah.metricType, metricData.Key)]
 				counterVec.WithLabelValues(payload.MarketplaceCode).Add(float64(metricData.Value))
 
-				//ah.saveMetricToRedis(metricData.Key, *metric) // взвешивание включения этой функции, возможно, стоит обсудить
+				//ah.saveMetricToRedis(metricData.Key, *metric) // todo: discuss if we need that for non-critical data
 			} else {
 				ah.log.Warnf("Invalid metric key received: %s", metricData.Key)
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key"})
@@ -97,7 +97,7 @@ func (ah *AbstractHandler) IncrementHandler(c *gin.Context) {
 	}
 }
 
-// ResetHandler - обработчик DELETE-запросов
+// ResetHandler - delete handler
 func (ah *AbstractHandler) ResetHandler(c *gin.Context) {
 	metricType := ah.metricType
 	ah.mutex.Lock()
@@ -110,7 +110,7 @@ func (ah *AbstractHandler) ResetHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Metrics reset"})
 }
 
-// GetMetrics - хелпер для возврата значений из мапы
+// GetMetrics - metric getter (helper)
 func (ah *AbstractHandler) GetMetrics() map[string]*float64 {
 	ah.mutex.Lock()
 	defer ah.mutex.Unlock()
@@ -118,7 +118,7 @@ func (ah *AbstractHandler) GetMetrics() map[string]*float64 {
 	return ah.metricsMap[ah.metricType]
 }
 
-// saveMetricToRedis - хелпер для сохранения атомарных метрик в Redis
+// saveMetricToRedis - save to redis helper
 func (ah *AbstractHandler) saveMetricToRedis(key string, value float64) {
 	redisClient := providers.GetRedisClient()
 	err := redisClient.Set(context.Background(), helpers.GetFormattedRedisKey(ah.metricType, key), value, 0).Err()

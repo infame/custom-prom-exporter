@@ -4,28 +4,28 @@ FROM golang:1.21 AS builder
 # Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
-# Копируем go модули и код приложения
+# copy go modules and app sources
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
-# Компилируем приложение внутри контейнера
+# compile app inside the container
 RUN CGO_ENABLED=0 GOOS=linux go build -o app
 
-# Второй этап: создаем минимальный образ для запуска приложения
+# create minimal image
 FROM alpine:latest
 
-# Устанавливаем пакеты, необходимые для работы Redis и прочие утилиты
+# install required packages
 RUN apk --no-cache add ca-certificates redis
 
-# Копируем скомпилированное приложение из первого этапа
+# copy compiled app
 COPY --from=builder /app/app /app/app
 
-# Устанавливаем рабочую директорию внутри контейнера
+# set up workdir
 WORKDIR /app
 
-# Открываем порт, на котором будет работать сервер, дефолтное значение = 8200
+# expose port, default = 8200
 EXPOSE 8200
 
-# Запускаем приложение при старте контейнера
+# run app
 CMD ["./app"]

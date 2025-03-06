@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-// AbstractHandler - структура обработчика
+// AbstractHandler - handler struct
 type AbstractHandler struct {
 	mutex          sync.Mutex
 	metricsMap     map[string]map[string]*float64
@@ -18,7 +18,7 @@ type AbstractHandler struct {
 	log            *logrus.Logger
 }
 
-// MetricSaver - интерфейс для записи ключей в Redis - not used
+// MetricSaver - redis keys interface [unused]
 type MetricSaver interface {
 	saveMetricToRedis(key string, value float64)
 }

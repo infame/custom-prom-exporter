@@ -11,7 +11,7 @@ var log *logrus.Logger
 
 type CustomJSONFormatter struct{}
 
-// Format - Создаем кастомный форматтер под kibana/opensearch с сортировкой полей для восприятия в логах kubectl logs
+// Format - custom logger for ELK/EFK
 func (f *CustomJSONFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	timestamp := entry.Time.Format(time.RFC3339Nano)
 	level := entry.Level.String()
@@ -35,7 +35,7 @@ func (f *CustomJSONFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	return append(serialized, '\n'), nil
 }
 
-// InitLogger - инициализация логгера
+// InitLogger - logger init
 func InitLogger() *logrus.Logger {
 	log = logrus.New()
 	log.SetFormatter(&CustomJSONFormatter{})
@@ -47,12 +47,12 @@ func InitLogger() *logrus.Logger {
 	return log
 }
 
-// GetLogger - возвращаем инстанс логгера
+// GetLogger - return logger instance
 func GetLogger() *logrus.Logger {
 	return log
 }
 
-// Пример использования дефолтного дефолтного форматтера:
+// // default formatter example
 // log.SetFormatter(&logrus.JSONFormatter{
 //		FieldMap: logrus.FieldMap{
 //			logrus.FieldKeyTime:  "@timestamp",

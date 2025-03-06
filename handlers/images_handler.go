@@ -8,7 +8,7 @@ import (
 	"prom-exporter/utilities"
 )
 
-// ImagesHandler - структура обработчика для парсера изображений
+// ImagesHandler - images parser handler struct
 type ImagesHandler struct {
 	*AbstractHandler
 	metricsMap map[string]map[string]*float64
@@ -16,7 +16,7 @@ type ImagesHandler struct {
 	metricType string
 }
 
-// NewImagesHandler - конструктор обработчика метрик парсера изображений
+// NewImagesHandler - images parser constructor
 func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*float64, metricDefinition []types.MetricDefinition) *ImagesHandler {
 	metricType := "parser_images" // todo: вынести в main.go или куда-то, чтоб не прописывать каждый раз в новом хэндлере
 	ah := NewAbstractHandler(redisClient, metricsMap, metricType)
@@ -27,12 +27,12 @@ func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[strin
 	}
 
 	ih.metricSaver = ih
-	ih.initMetrics(metricType, metricDefinition) // Инициализация метрик для images
+	ih.initMetrics(metricType, metricDefinition) // init metric for images
 
 	return ih
 }
 
-// initMetrics - инициализация метрик в проме
+// initMetrics - init prom metrics
 func (ih *ImagesHandler) initMetrics(metricType string, metricDefinitions []types.MetricDefinition) {
 	ih.log.Info("Init ImagesHandler")
 	count := 0
@@ -49,7 +49,7 @@ func (ih *ImagesHandler) initMetrics(metricType string, metricDefinitions []type
 	ih.log.Info("Registered metrics: ", count)
 }
 
-// SetupRoutes - настройка роутов
+// SetupRoutes - set up routes
 func (ih *ImagesHandler) SetupRoutes(r *gin.Engine) {
 	r.GET("/parser/images", ih.MetricsHandler)
 	r.POST("/parser/images", ih.IncrementHandler)
