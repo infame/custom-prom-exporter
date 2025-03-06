@@ -33,7 +33,7 @@ To install the project dependencies, run:
 go mod download
 ```
 
-## Локальный запуск
+## Local launch
 
 The project can be launched using the following command:
 
