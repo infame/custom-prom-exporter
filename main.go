@@ -1,4 +1,4 @@
-// Package main - экспортер для prometheus
+// Package main - prometheus exporter
 package main
 
 import (
@@ -35,7 +35,7 @@ var (
 	metricsMap  map[string]map[string]*float64
 )
 
-// metricDefinitions - сам массив определений
+// metricDefinitions - definitions array
 var metricDefinitions = []types.MetricDefinition{
 	{
 		Type: "parser_images",
@@ -46,7 +46,7 @@ var metricDefinitions = []types.MetricDefinition{
 			{Key: "unhandled_errors_total", Description: "Total number of unhandled errors"},
 		},
 	},
-	// метрики ниже -- для примера
+	// // example
 	//{
 	//	Type: "playwright",
 	//	Metrics: []types.MetricDetail{
@@ -83,11 +83,11 @@ func initMetricsMap() map[string]map[string]*float64 {
 	return metricsMap
 }
 
-// main - точка входа в приложение
+// main - app entry point
 func main() {
 	loadEnvVariables()
 
-	// Обрабатываем sigterm
+	// handle sigterm
 	chSub := make(chan os.Signal, 1)
 	signal.Notify(chSub, syscall.SIGTERM)
 	signal.Notify(chSub, syscall.SIGINT)
@@ -97,25 +97,25 @@ func main() {
 		handleSignal(sig)
 	}()
 
-	// Включаем логгер
+	// enable logger
 	log = utilities.InitLogger()
 
-	// Подключаемся к Redis
+	// connect to redis
 	redisClient = providers.InitRedisClient(redisAddr, redisPassword, redisDB)
 	defer providers.CloseRedisClient()
 
-	// Инициализируем http-server
+	// init http-server
 	r := gin.New()
 	gin.SetMode(ginMode)
 
-	// Активируем middleware
+	// activate middleware
 	r.Use(gin.Recovery())
 
-	// Отключаем стандартные логи
+	// turn off standard logs
 	gin.DisableConsoleColor()
 	gin.DefaultWriter = io.Discard
 
-	// Форматируем опции в формат kibana
+	// format logs to ELK/EFK format
 	r.Use(func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
@@ -132,24 +132,24 @@ func main() {
 		}).Info("Request processed")
 	})
 
-	metricsMap = initMetricsMap() // Инициализируем глобальную карту для метрик
+	metricsMap = initMetricsMap() // init global map
 	loadMetricsFromRedis()
 
 	//if metricsMap["images"]["images_uploaded_total"] == nil || metricsMap["images"]["images_downloaded_total"] == nil {
-	//	log.Fatal("Ошибка загрузки метрик из Redis")
+	//	log.Fatal("Err loading metrics from redis")
 	//}
 
-	// Запускаем обработчики и биндим роуты
+	// Launch handlers & bind routes
 	imagesHandler := handlers.NewImagesHandler(redisClient, metricsMap, metricDefinitions)
 	imagesHandler.SetupRoutes(r)
 
-	// Создаем глобальный эндпоинт для всех метрик
+	// Create global endpoint for all metrics
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// Создаем новый экземпляр cron
+	// New cron
 	c := cron.New()
 
-	// Добавляем задачу в cron для выполнения каждые 30 секунд
+	// Add task to cron 30s
 	_, err := c.AddFunc("@every "+strconv.Itoa(redisCooldown)+"s", func() {
 		saveAllMetricsToRedis(redisClient, metricsMap)
 	})
@@ -158,14 +158,14 @@ func main() {
 	}
 	c.Start()
 
-	// Запускаем сервак
+	// Launch the server
 	serverErr := r.Run(serverAddr)
 	if serverErr != nil {
 		log.Fatal("Error starting server: ", err)
 	}
 }
 
-// loadEnvVariables - загружаем переменные из .env
+// loadEnvVariables - env load
 func loadEnvVariables() {
 	ginMode = getEnv("GIN_MODE", "release")
 	serverAddr = ":" + getEnv("PORT", "8200")
@@ -175,7 +175,7 @@ func loadEnvVariables() {
 	redisCooldown, _ = strconv.Atoi(getEnv("REDIS_SYNC_INTERVAL", "30"))
 }
 
-// loadMetricsFromRedis - загружаем первичные значения из Redis, если они есть
+// loadMetricsFromRedis - load initial values from redis
 func loadMetricsFromRedis() {
 	log.Info(`loading metrics from redis`)
 
@@ -197,13 +197,13 @@ func loadMetricsFromRedis() {
 			} else {
 				log.Infof("Loaded metric %s with value = %d", metricName, int(value))
 			}
-			valuePtr := value                       // Создаём новую переменную
-			metricsMap[metricType][key] = &valuePtr // Используем адрес новой переменной
+			valuePtr := value                       // new var
+			metricsMap[metricType][key] = &valuePtr // use var addr
 		}
 	}
 }
 
-// getEnv - чтение переменных окружения
+// getEnv - read env
 func getEnv(key, defaultValue string) string {
 	value, exists := os.LookupEnv(key)
 	if !exists {
@@ -212,7 +212,7 @@ func getEnv(key, defaultValue string) string {
 	return value
 }
 
-// saveAllMetricsToRedis - сохранение всех метрик в redis по ключам вида prometheus:<type>:<metric_key>
+// saveAllMetricsToRedis - save metrics to redis, key template is prometheus:<type>:<metric_key>
 func saveAllMetricsToRedis(redisClient *redis.Client, metricsMap map[string]map[string]*float64) {
 	var succeed = true
 	var counter = 0
