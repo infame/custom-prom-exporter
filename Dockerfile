@@ -1,7 +1,7 @@
-# Используем официальный образ Golang в качестве базового
+# use official docker golang image
 FROM golang:1.21 AS builder
 
-# Устанавливаем рабочую директорию внутри контейнера
+# set up workdir
 WORKDIR /app
 
 # copy go modules and app sources

@@ -12,13 +12,13 @@ import (
 type ImagesHandler struct {
 	*AbstractHandler
 	metricsMap map[string]map[string]*float64
-	log        *logrus.Logger // Логгер для этого конкретного ImagesHandler
+	log        *logrus.Logger // logger for this handler
 	metricType string
 }
 
 // NewImagesHandler - images parser constructor
 func NewImagesHandler(redisClient *redis.Client, metricsMap map[string]map[string]*float64, metricDefinition []types.MetricDefinition) *ImagesHandler {
-	metricType := "parser_images" // todo: вынести в main.go или куда-то, чтоб не прописывать каждый раз в новом хэндлере
+	metricType := "parser_images" // todo: put to main.go or somewhere
 	ah := NewAbstractHandler(redisClient, metricsMap, metricType)
 	ih := &ImagesHandler{
 		AbstractHandler: ah,
